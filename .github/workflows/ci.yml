@@ -1,0 +1,83 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Type Check Monorepo
+        run: npm run typecheck
+
+      - name: Lint Monorepo
+        run: npm run lint
+
+  test-backend:
+    name: Test Backend API
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_password
+          POSTGRES_DB: social_platform_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Prisma Client Generate
+        run: npm run prisma:generate
+
+      - name: Run Backend Tests
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres_password@localhost:5432/social_platform_test?schema=public"
+          REDIS_URL: "redis://localhost:6379"
+          JWT_ACCESS_SECRET: "test_jwt_access_secret_key_minimum_32_chars"
+          JWT_REFRESH_SECRET: "test_jwt_refresh_secret_key_minimum_32_chars"
+          NODE_ENV: test
+        run: npm run test
