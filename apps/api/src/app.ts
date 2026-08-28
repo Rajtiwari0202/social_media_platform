@@ -6,6 +6,8 @@ import { env } from './config/env.js';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { usersRouter } from './modules/users/users.routes.js';
+import { postsRouter } from './modules/posts/posts.routes.js';
+import { mediaRouter } from './modules/media/media.routes.js';
 import { errorHandler, AppError } from './middlewares/error.middleware.js';
 
 export const createApp = (): Express => {
@@ -48,6 +50,8 @@ export const createApp = (): Express => {
         health: '/health',
         auth: '/api/v1/auth',
         users: '/api/v1/users',
+        posts: '/api/v1/posts',
+        media: '/api/v1/media',
       },
     });
   });
@@ -55,6 +59,8 @@ export const createApp = (): Express => {
   // Mount Feature Modules
   apiV1Router.use('/auth', authRouter);
   apiV1Router.use('/users', usersRouter);
+  apiV1Router.use('/posts', postsRouter);
+  apiV1Router.use('/media', mediaRouter);
 
   app.use('/api/v1', apiV1Router);
 

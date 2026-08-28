@@ -60,6 +60,24 @@ This living document serves as our comprehensive technical journal, architectura
      - Built React `<FollowButton />` component with instant optimistic feedback, hover-to-unfollow transitions, and error rollback.
      - Implemented `<UsersListModal />` displaying followers/following lists with real-time client search and inline follow toggles.
 
+### [Phase 3] Content Creation, Rich Media Pipeline & Interactive Threads
+- **Date**: 2026-08-29
+- **Core Problem Statement**: Social publishing requires direct-to-storage media uploads to avoid saturating API server memory with multi-megabyte payloads. Furthermore, reaction toggling (Likes, Bookmarks, Reposts) and nested comment trees require strict transaction integrity to prevent counter desynchronization.
+- **Key Engineering Decisions**:
+  1. **Direct-to-S3/MinIO Presigned Upload Architecture**:
+     - Implemented `POST /api/v1/media/presigned-url` providing short-lived (300s) presigned PUT URLs with SHA-256 signatures.
+     - Clients stream image binaries directly to storage, completely bypassing backend Node.js event-loop memory.
+  2. **Automated Entity Parsing & In-App Mentions**:
+     - Content is parsed for `#hashtags` and `@usernames`.
+     - Valid mentioned accounts automatically receive non-blocking `MENTION` notifications in PostgreSQL.
+  3. **Atomic Reaction State Machine**:
+     - Likes, bookmarks, and reposts execute in atomic Prisma transactions with database-level composite uniqueness guarantees, preventing duplicate reactions and counter drift.
+  4. **Hierarchical Nested Comments Tree**:
+     - Self-referencing `parentId` structure on comments enabling structured multi-tier discussion threads without exponential query complexity.
+  5. **Rich Interactive UI & Feed Composer**:
+     - Developed `<PostComposer />` with client-side presigned direct upload, live thumbnails, character limits, and optimistic feed injection.
+     - Built `<PostCard />` with responsive multi-image layouts, animated reactions, and nested `<CommentSection />`.
+
 ---
 
 ## 🔒 Security Architecture Reference

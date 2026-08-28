@@ -111,6 +111,28 @@ export interface CommentDTO {
   updatedAt: string;
 }
 
+export interface PresignedUrlResponseDTO {
+  uploadUrl: string;
+  mediaKey: string;
+  publicUrl: string;
+  expiresIn: number;
+}
+
+export interface PostActionResponseDTO {
+  postId: string;
+  hasLiked?: boolean;
+  hasBookmarked?: boolean;
+  hasReposted?: boolean;
+  likesCount: number;
+  bookmarksCount: number;
+  repostsCount: number;
+}
+
+export interface CommentThreadDTO extends CommentDTO {
+  replies?: CommentDTO[];
+  repliesCount?: number;
+}
+
 export interface NotificationDTO {
   id: string;
   recipientId: string;
