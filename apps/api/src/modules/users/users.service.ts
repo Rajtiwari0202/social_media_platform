@@ -12,9 +12,11 @@ export class UsersService {
   ): Promise<ProfileDTO & { username: string; isVerified: boolean; isPrivate: boolean }> {
     let isFollowing = false;
     let isFollowedBy = false;
+    let isBlocked = false;
+    let isMuted = false;
 
     if (viewerUserId && viewerUserId !== profile.userId) {
-      const [followingRelation, followedByRelation] = await Promise.all([
+      const [followingRelation, followedByRelation, blockRelation, muteRelation] = await Promise.all([
         prisma.follow.findUnique({
           where: {
             followerId_followingId: {
@@ -31,10 +33,28 @@ export class UsersService {
             },
           },
         }),
+        prisma.block.findFirst({
+          where: {
+            OR: [
+              { blockerId: viewerUserId, blockedId: profile.userId },
+              { blockerId: profile.userId, blockedId: viewerUserId },
+            ],
+          },
+        }),
+        prisma.mute.findUnique({
+          where: {
+            muterId_mutedId: {
+              muterId: viewerUserId,
+              mutedId: profile.userId,
+            },
+          },
+        }),
       ]);
 
       isFollowing = !!followingRelation;
       isFollowedBy = !!followedByRelation;
+      isBlocked = !!blockRelation;
+      isMuted = !!muteRelation;
     }
 
     return {
@@ -54,6 +74,8 @@ export class UsersService {
       isPrivate: profile.user.isPrivate,
       isFollowing,
       isFollowedBy,
+      isBlocked,
+      isMuted,
       createdAt: profile.createdAt.toISOString(),
       updatedAt: profile.updatedAt.toISOString(),
     };
@@ -63,6 +85,21 @@ export class UsersService {
     const profile = await this.repo.findByUsername(username);
     if (!profile) {
       throw new AppError(404, 'User Not Found', `User '@${username}' does not exist.`);
+    }
+
+    if (viewerUserId && viewerUserId !== profile.userId) {
+      const block = await prisma.block.findFirst({
+        where: {
+          OR: [
+            { blockerId: viewerUserId, blockedId: profile.userId },
+            { blockerId: profile.userId, blockedId: viewerUserId },
+          ],
+        },
+      });
+
+      if (block) {
+        throw new AppError(404, 'User Not Found', `User '@${username}' does not exist.`);
+      }
     }
 
     return this.mapToProfileDTO(profile, viewerUserId);

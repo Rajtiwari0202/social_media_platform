@@ -59,6 +59,9 @@ model User {
   blocking  Block[] @relation("BlockerRelation")
   blockedBy Block[] @relation("BlockedRelation")
 
+  muting  Mute[] @relation("MuterRelation")
+  mutedBy Mute[] @relation("MutedRelation")
+
   receivedNotifications Notification[] @relation("RecipientRelation")
   sentNotifications     Notification[] @relation("SenderRelation")
 
@@ -127,6 +130,18 @@ model Block {
 
   @@id([blockerId, blockedId])
   @@map("blocks")
+}
+
+model Mute {
+  muterId   String   @map("muter_id") @db.Uuid
+  mutedId   String   @map("muted_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  muter User @relation("MuterRelation", fields: [muterId], references: [id], onDelete: Cascade)
+  muted User @relation("MutedRelation", fields: [mutedId], references: [id], onDelete: Cascade)
+
+  @@id([muterId, mutedId])
+  @@map("mutes")
 }
 
 model Post {

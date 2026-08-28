@@ -46,5 +46,21 @@ export const PaginationQuerySchema = z.object({
     .default(APP_LIMITS.DEFAULT_PAGE_SIZE),
 });
 
+export const FollowersQuerySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce
+    .number()
+    .min(1)
+    .max(APP_LIMITS.MAX_PAGE_SIZE)
+    .default(APP_LIMITS.DEFAULT_PAGE_SIZE),
+  search: z.string().max(50).optional(),
+});
+
+export const UsernameParamSchema = z.object({
+  username: z.string().min(1, 'Username parameter is required'),
+});
+
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
 export type PaginationQueryInput = z.infer<typeof PaginationQuerySchema>;
+export type FollowersQueryInput = z.infer<typeof FollowersQuerySchema>;
+export type UsernameParamInput = z.infer<typeof UsernameParamSchema>;

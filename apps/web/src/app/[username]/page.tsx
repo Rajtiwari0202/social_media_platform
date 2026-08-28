@@ -1,25 +1,26 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/auth-store';
 import { apiClient } from '@/lib/api-client';
 import { ProfileDTO } from '@social/shared';
+import { FollowButton } from '@/components/follow-button';
+import { UsersListModal } from '@/components/users-list-modal';
 import {
   Calendar,
   MapPin,
   Link as LinkIcon,
   BadgeCheck,
   Edit3,
-  UserPlus,
-  UserCheck,
-  Layers,
   FileText,
-  Image as ImageIcon,
-  Heart,
   Loader2,
   AlertCircle,
+  MoreHorizontal,
+  Ban,
+  VolumeX,
+  Volume2,
 } from 'lucide-react';
 
 interface PublicProfile extends ProfileDTO {
@@ -30,6 +31,7 @@ interface PublicProfile extends ProfileDTO {
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const rawUsername = params.username as string;
   const username = rawUsername?.startsWith('%40') || rawUsername?.startsWith('@')
     ? decodeURIComponent(rawUsername).replace('@', '')
@@ -40,6 +42,16 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'replies' | 'media' | 'likes'>('posts');
+  const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
+
+  // Modal State
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: 'followers' | 'following';
+  }>({
+    isOpen: false,
+    type: 'followers',
+  });
 
   const isOwnProfile = currentUser && currentUser.username.toLowerCase() === username.toLowerCase();
 
@@ -60,6 +72,50 @@ export default function ProfilePage() {
         setIsLoading(false);
       });
   }, [username]);
+
+  const handleFollowChange = (isFollowing: boolean, diff: number) => {
+    if (profile) {
+      setProfile({
+        ...profile,
+        isFollowing,
+        followersCount: Math.max(0, profile.followersCount + diff),
+      });
+    }
+  };
+
+  const handleToggleBlock = async () => {
+    if (!profile || !isAuthenticated) return;
+    setShowOptionsDropdown(false);
+
+    try {
+      if (profile.isBlocked) {
+        await apiClient.delete(`/users/${profile.username}/block`);
+        setProfile({ ...profile, isBlocked: false });
+      } else {
+        await apiClient.post(`/users/${profile.username}/block`);
+        setProfile({ ...profile, isBlocked: true, isFollowing: false });
+      }
+    } catch {
+      alert('Failed to update block status.');
+    }
+  };
+
+  const handleToggleMute = async () => {
+    if (!profile || !isAuthenticated) return;
+    setShowOptionsDropdown(false);
+
+    try {
+      if (profile.isMuted) {
+        await apiClient.delete(`/users/${profile.username}/mute`);
+        setProfile({ ...profile, isMuted: false });
+      } else {
+        await apiClient.post(`/users/${profile.username}/mute`);
+        setProfile({ ...profile, isMuted: true });
+      }
+    } catch {
+      alert('Failed to update mute status.');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -119,7 +175,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div>
+            <div className="flex items-center gap-2">
               {isOwnProfile ? (
                 <Link
                   href="/settings/profile"
@@ -129,22 +185,53 @@ export default function ProfilePage() {
                   Edit Profile
                 </Link>
               ) : (
-                <button
-                  onClick={() => alert('Follow/Unfollow will be activated in Phase 2!')}
-                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
-                >
-                  {profile.isFollowing ? (
-                    <>
-                      <UserCheck className="w-4 h-4" />
-                      Following
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-4 h-4" />
-                      Follow
-                    </>
+                <>
+                  <FollowButton
+                    username={profile.username}
+                    initialIsFollowing={profile.isFollowing}
+                    onFollowChange={handleFollowChange}
+                  />
+
+                  {isAuthenticated && (
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
+                        className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition-all cursor-pointer"
+                      >
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
+
+                      {showOptionsDropdown && (
+                        <div className="absolute right-0 mt-2 w-48 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl py-1 z-50 text-sm">
+                          <button
+                            onClick={handleToggleMute}
+                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-slate-300 hover:bg-slate-800 text-left transition-colors cursor-pointer"
+                          >
+                            {profile.isMuted ? (
+                              <>
+                                <Volume2 className="w-4 h-4 text-slate-400" />
+                                Unmute @{profile.username}
+                              </>
+                            ) : (
+                              <>
+                                <VolumeX className="w-4 h-4 text-slate-400" />
+                                Mute @{profile.username}
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={handleToggleBlock}
+                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-red-400 hover:bg-red-500/10 text-left transition-colors cursor-pointer"
+                          >
+                            <Ban className="w-4 h-4" />
+                            {profile.isBlocked ? `Unblock @${profile.username}` : `Block @${profile.username}`}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
-                </button>
+                </>
               )}
             </div>
           </div>
@@ -188,20 +275,26 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Stats Bar */}
+          {/* Stats Bar (Clickable to open Followers & Following modals) */}
           <div className="flex items-center gap-6 mt-5 pt-4 border-t border-slate-800 text-sm">
             <div>
               <span className="font-bold text-white">{profile.postsCount}</span>{' '}
               <span className="text-slate-400">Posts</span>
             </div>
-            <div>
+            <button
+              onClick={() => setModalState({ isOpen: true, type: 'following' })}
+              className="hover:underline cursor-pointer transition-colors"
+            >
               <span className="font-bold text-white">{profile.followingCount}</span>{' '}
               <span className="text-slate-400">Following</span>
-            </div>
-            <div>
+            </button>
+            <button
+              onClick={() => setModalState({ isOpen: true, type: 'followers' })}
+              className="hover:underline cursor-pointer transition-colors"
+            >
               <span className="font-bold text-white">{profile.followersCount}</span>{' '}
               <span className="text-slate-400">Followers</span>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -256,6 +349,14 @@ export default function ProfilePage() {
         <p className="text-base font-semibold text-slate-400">No posts published yet</p>
         <p className="text-xs text-slate-500 mt-1">Posts and rich media feeds will be created in Phase 3 & 4.</p>
       </div>
+
+      {/* Followers / Following Modal */}
+      <UsersListModal
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState({ ...modalState, isOpen: false })}
+        username={profile.username}
+        type={modalState.type}
+      />
     </div>
   );
 }

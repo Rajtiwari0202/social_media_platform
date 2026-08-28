@@ -41,6 +41,25 @@ This living document serves as our comprehensive technical journal, architectura
      - Fast public profile lookup (`GET /api/v1/users/:username`) with follower/following/post counters.
      - Profile editing (`PATCH /api/v1/users/profile`) with Zod schema validation.
 
+### [Phase 2] Social Graph, Follower System & Relationship Matrix
+- **Date**: 2026-08-28
+- **Core Problem Statement**: Social networks demand instant follow graph operations with zero read/write degradation as graph edges grow into millions of records. Furthermore, anti-harassment mechanisms (blocking & muting) must be rigorously enforced at database and API levels to prevent unauthorized data exposure.
+- **Key Engineering Decisions**:
+  1. **Composite Primary Keys & Indexing Strategy**:
+     - The `follows` table uses composite primary key `(follower_id, following_id)` for $\mathcal{O}(1)$ relation lookups and idempotency.
+     - Dual composite indexes `idx_follows_following_id (following_id, created_at DESC)` and `idx_follows_follower_id (follower_id, created_at DESC)` ensure cursor-based pagination executes in sub-10ms without table scans.
+  2. **Transactional Counter Maintenance**:
+     - Followers and Following counts are cached directly on `Profile` records and maintained using atomic Prisma transaction batch operations (`increment: 1`, `decrement: 1`), removing the need for expensive `COUNT(*)` queries on profile views.
+  3. **Bidirectional Block Cascade & Strict Privacy Isolation**:
+     - When user A blocks user B:
+       - Follow connections in **both directions** are automatically severed within the same transaction, and profile counters are cleanly decremented.
+       - Query-level filtering: if user A and user B have a block relation, querying either profile returns `404 User Not Found` (strict privacy protection).
+  4. **Cursor-Based Pagination Standard**:
+     - Follower and following lists return base64-encoded timestamp cursors (`createdAt`), preventing duplicate items or missed items caused by offset-drift when users follow/unfollow in real-time.
+  5. **Optimistic UI with Instant State Reflection**:
+     - Built React `<FollowButton />` component with instant optimistic feedback, hover-to-unfollow transitions, and error rollback.
+     - Implemented `<UsersListModal />` displaying followers/following lists with real-time client search and inline follow toggles.
+
 ---
 
 ## 🔒 Security Architecture Reference

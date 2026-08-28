@@ -25,8 +25,35 @@ export interface ProfileDTO {
   postsCount: number;
   isFollowing?: boolean;
   isFollowedBy?: boolean;
+  isBlocked?: boolean;
+  isMuted?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface UserSummaryDTO {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
+  isVerified: boolean;
+  isFollowing?: boolean;
+  isFollowedBy?: boolean;
+  followedAt?: string;
+}
+
+export interface RelationshipStatusDTO {
+  isFollowing: boolean;
+  isFollowedBy: boolean;
+  isBlocked: boolean;
+  isMuted: boolean;
+}
+
+export interface FollowResponseDTO {
+  isFollowing: boolean;
+  followersCount: number;
+  followingCount: number;
 }
 
 export interface MediaDTO {

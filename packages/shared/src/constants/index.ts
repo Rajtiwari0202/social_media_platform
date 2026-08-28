@@ -52,6 +52,7 @@ export const API_ROUTES = {
     FOLLOWERS: (username: string) => `/users/${username}/followers`,
     FOLLOWING: (username: string) => `/users/${username}/following`,
     BLOCK: (username: string) => `/users/${username}/block`,
+    MUTE: (username: string) => `/users/${username}/mute`,
   },
   POSTS: {
     BASE: '/posts',
