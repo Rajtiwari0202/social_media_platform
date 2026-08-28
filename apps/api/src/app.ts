@@ -4,6 +4,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import { healthRouter } from './routes/health.routes.js';
+import { authRouter } from './modules/auth/auth.routes.js';
+import { usersRouter } from './modules/users/users.routes.js';
 import { errorHandler, AppError } from './middlewares/error.middleware.js';
 
 export const createApp = (): Express => {
@@ -42,9 +44,17 @@ export const createApp = (): Express => {
       name: 'Social Media Platform API',
       version: 'v1.0.0',
       status: 'operational',
-      documentation: '/docs',
+      endpoints: {
+        health: '/health',
+        auth: '/api/v1/auth',
+        users: '/api/v1/users',
+      },
     });
   });
+
+  // Mount Feature Modules
+  apiV1Router.use('/auth', authRouter);
+  apiV1Router.use('/users', usersRouter);
 
   app.use('/api/v1', apiV1Router);
 
