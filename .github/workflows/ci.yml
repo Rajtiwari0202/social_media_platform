@@ -23,6 +23,9 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Prisma Client Generate
+        run: npm run prisma:generate
+
       - name: Type Check Monorepo
         run: npm run typecheck
 
